@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MR Perfect - Portfolio</title>
+
+    <!-- Three.js & GLTFLoader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- All styles inlined from style.css -->
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: transparent;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --primary-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --glow-green: #10b981;
+            --glow-red: #f43f5e;
+            --glow-blue: #3b82f6;
+            --glow-yellow: #eab308;
+            --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { width: 100%; min-height: 100vh; padding: 20px; padding-bottom: 50px; margin: 0 auto; }
+        .main-layout { display: flex; flex-direction: column; gap: 40px; }
+        .bottom-section { margin-top: 40px; text-align: center; padding-top: 40px; }
+
+        .reveal-on-scroll {
+            opacity: 0; transform: translateY(40px) scale(0.96); filter: blur(4px);
+            transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: opacity, transform, filter;
+        }
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+
+        .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+        .delay-100 { animation-delay: 0.1s; } .delay-200 { animation-delay: 0.2s; } .delay-300 { animation-delay: 0.3s; }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 33% { transform: translate(30px, -50px) scale(1.1); } 66% { transform: translate(-20px, 20px) scale(0.9); } 100% { transform: translate(0, 0) scale(1); } }
+        .animate-float-slow { animation: float 20s ease-in-out infinite; }
+        .animate-float-medium { animation: float 15s ease-in-out infinite reverse; }
+
+        @keyframes profilePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.3); } 50% { box-shadow: 0 0 0 14px rgba(79, 70, 229, 0); } }
+
+        .btn-click:active { transform: scale(0.95) !important; transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+
+        .profile-card {
+            background: var(--bg-card); border-radius: 24px; padding: 40px 25px; text-align: center; box-shadow: var(--shadow-soft); border: 1px solid #fff; position: relative; overflow: hidden; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
+        }
+        .profile-card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(79, 70, 229, 0.12); }
+        .profile-card::before { content: ''; position: absolute; top: -15%; right: -15%; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(79, 70, 229, 0.08) 0%, transparent 70%); z-index: 0; animation: float 18s ease-in-out infinite; pointer-events: none; }
+        .profile-card::after { content: ''; position: absolute; bottom: -10%; left: -10%; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(124, 58, 237, 0.06) 0%, transparent 70%); z-index: 0; animation: float 14s ease-in-out infinite reverse; pointer-events: none; }
+        .profile-card>* { position: relative; z-index: 1; }
+
+        .profile-img { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid #fff; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); margin-bottom: 15px; background: #f1f5f9; animation: profilePulse 3s infinite; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .profile-img:hover { transform: scale(1.08); }
+
+        .username { font-size: 2rem; font-weight: 800; margin: 5px 0; background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .about-btn { background: #fff; color: var(--text-sub); padding: 10px 25px; border-radius: 50px; font-weight: 700; cursor: pointer; border: 1px solid #e2e8f0; margin-top: 10px; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .about-btn:hover { border-color: #4f46e5; color: #4f46e5; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.15); }
+
+        .connect-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+        @keyframes floatBubble { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+        .social-bubble { width: 48px; height: 48px; background: #fff; border-radius: 35% 65% 55% 45% / 50% 40% 60% 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); cursor: pointer; border: 2.5px solid #e2e8f0; transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94); animation: floatBubble 2.2s ease-in-out infinite alternate; position: relative; }
+        .social-bubble:nth-child(odd) { animation-delay: -1.1s; }
+        .social-bubble svg { width: 24px; height: 24px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .social-bubble:hover { transform: translateY(-14px) scale(1.18) !important; animation-play-state: paused; background: #ffffff; border-color: var(--brand-color, #4f46e5); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08), 0 0 25px 6px var(--brand-glow, rgba(79, 70, 229, 0.25)); }
+        .social-bubble:hover svg { transform: scale(1.15); }
+
+        .email-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: rgba(124, 58, 237, 0.08); color: #7c3aed; padding: 12px 24px; border-radius: 16px; font-weight: 700; margin-top: 25px; font-size: 0.9rem; border: 1px solid rgba(124, 58, 237, 0.1); transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .email-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(124, 58, 237, 0.18); background: rgba(124, 58, 237, 0.14); }
+
+        .section-label { font-size: 0.85rem; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 20px; text-transform: uppercase; }
+        .label-green { color: var(--glow-yellow); text-shadow: 0 0 15px rgba(234, 179, 8, 0.25); }
+        .label-red { color: var(--glow-blue); text-shadow: 0 0 15px rgba(59, 130, 246, 0.25); }
+        .label-sale { color: var(--glow-red); text-shadow: 0 0 15px rgba(244, 63, 94, 0.25); }
+
+        .highlights-wrapper { position: relative; width: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 5%, black 95%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0%, black 5%, black 95%, transparent 100%); margin-bottom: 40px; padding: 10px 0; }
+        .highlights-track { display: flex; gap: 18px; width: max-content; animation: highlightsScroll 30s linear infinite; will-change: transform; }
+        .highlights-track:hover { animation-play-state: paused; }
+        @keyframes highlightsScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        .highlight-card { width: 85px; height: 85px; min-width: 85px; border-radius: 50%; background: #fff; border: 3px solid #fff; cursor: pointer; overflow: hidden; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, box-shadow 0.4s ease; flex-shrink: 0; }
+        .highlight-card:hover { transform: scale(1.15) translateY(-8px); border-color: #4f46e5; box-shadow: 0 20px 40px rgba(79, 70, 229, 0.25); z-index: 5; }
+        .highlight-card img { width: 100%; height: 100%; object-fit: cover; }
+
+        .samples-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 30px 15px; padding: 10px 0; }
+        .app-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .app-item:hover { transform: translateY(-10px) scale(1.06); }
+        .app-icon { width: 90px; height: 90px; min-width: 90px; border-radius: 50%; background: #fff; margin-bottom: 12px; overflow: hidden; border: 3px solid #fff; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06); transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .app-item:hover .app-icon { border-color: #7c3aed; box-shadow: 0 16px 35px rgba(124, 58, 237, 0.2); }
+        .app-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .app-name { font-size: 0.85rem; font-weight: 700; text-align: center; color: var(--text-main); transition: color 0.3s; }
+        .app-item:hover .app-name { color: #7c3aed; }
+        .app-price { font-size: 0.75rem; font-weight: 600; color: #10b981; margin-top: 4px; }
+
+        .nav-btn-float { position: fixed; top: 16px; left: 16px; z-index: 2000; width: auto; height: auto; border-radius: 0; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 6px; transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .nav-btn-float:hover { opacity: 0.65; transform: scale(1.15); }
+        .nav-btn-float svg { width: 28px; height: 28px; display: block; }
+        .chat-header-label { position: fixed; top: 18px; left: 55px; z-index: 2001; font-weight: 700; font-size: 1.1rem; color: #0f172a; pointer-events: none; transition: opacity 0.3s ease; }
+
+        .exit-pill-float { position: fixed; top: 20px; left: 20px; z-index: 2100; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(12px); color: #fff; padding: 10px 22px; border-radius: 50px; font-weight: 700; cursor: move; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3); display: flex; align-items: center; gap: 8px; transition: background 0.3s, transform 0.25s; touch-action: none; user-select: none; }
+        .exit-pill-float:hover { background: #000; transform: scale(1.04); }
+
+        .view-code-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); color: #fff; border: none; border-radius: 50px; font-weight: 800; font-size: 1rem; box-shadow: 0 10px 25px rgba(244, 63, 94, 0.3); cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .view-code-btn:hover { transform: translateY(-4px); box-shadow: 0 16px 35px rgba(244, 63, 94, 0.4); }
+        .view-code-btn:active { transform: scale(0.95); }
+        .view-code-btn.secondary { background: #fff; color: #e11d48; border: 2px solid #e11d48; }
+        .view-code-btn.secondary:hover { background: #fff5f7; box-shadow: 0 14px 30px rgba(225, 29, 72, 0.2); }
+
+        .project-links-container { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 350px; margin: 0 auto 30px; }
+
+        .page-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f8fafc; z-index: 1000; display: flex; flex-direction: column; overflow: hidden; opacity: 0; transform: scale(0.92); pointer-events: none; transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1), transform 0.45s cubic-bezier(0.4, 0, 0.2, 1); }
+        .page-overlay.hidden { display: flex !important; opacity: 0; transform: scale(0.92); pointer-events: none; }
+        .page-overlay:not(.hidden) { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+        .scroll-content { flex: 1; overflow-y: auto; padding: 25px; padding-top: 80px; width: 100%; max-width: 800px; margin: 0 auto; }
+        .d-logo { width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 20px; display: block; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); border: 4px solid #fff; background: #f1f5f9; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .d-logo:hover { transform: scale(1.1); }
+        .slider-box { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 15px; margin-bottom: 25px; scroll-snap-type: x mandatory; }
+        .slide-img { min-width: 100%; height: auto; max-height: 450px; border-radius: 16px; object-fit: contain; background: #0f172a; scroll-snap-align: center; }
+
+        .modal-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.35s ease; }
+        .modal-wrap.hidden { display: flex !important; opacity: 0; pointer-events: none; }
+        .modal-wrap:not(.hidden) { opacity: 1; pointer-events: auto; }
+        .modal-card { background: #fff; width: 90%; max-width: 380px; padding: 30px; border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.2); text-align: center; position: relative; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        #chat-modal .scroll-content { display: flex; flex-direction: column; height: 100vh; padding-bottom: 30px; max-width: 650px; }
+        #chat-history { flex: 1; min-height: 0; overflow-y: auto; background: #f8fafc; padding: 20px; border-radius: 20px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        @keyframes messageIn { from { opacity: 0; transform: translateY(12px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .msg { padding: 12px 18px; border-radius: 18px; font-size: 0.95rem; max-width: 80%; word-break: break-word; animation: messageIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); line-height: 1.5; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); transition: transform 0.2s ease; }
+        .msg:hover { transform: scale(1.02); }
+        .msg.me { background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; align-self: flex-end; border-bottom-right-radius: 6px; }
+        .msg.admin { background: #fff; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06); border: 1px solid #f1f5f9; }
+        .chat-input-row { display: flex; gap: 10px; margin-top: auto; background: #fff; padding: 10px 15px; border-radius: 50px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; transition: box-shadow 0.3s ease, border-color 0.3s ease; }
+        .chat-input-row:focus-within { border-color: #4f46e5; box-shadow: 0 6px 25px rgba(79, 70, 229, 0.15); }
+        #chat-input { flex: 1; border: none; padding: 8px 10px; font-family: inherit; font-size: 0.95rem; outline: none; background: transparent; border-radius: 50px; margin: 0; }
+        .chat-send-btn { background: #4f46e5; color: #fff; border: none; padding: 10px 18px; border-radius: 50px; font-weight: 700; cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; }
+        .chat-send-btn:hover { background: #6366f1; transform: scale(1.08); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35); }
+        .chat-send-btn:active { transform: scale(0.92); transition: transform 0.1s; }
+
+        #toast { visibility: hidden; min-width: 250px; background: #1e293b; color: #fff; text-align: center; border-radius: 50px; padding: 14px; position: fixed; z-index: 4000; left: 50%; bottom: 30px; transform: translateX(-50%); font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+
+        .hidden { display: none !important; }
+        footer { font-size: 0.85rem; font-weight: 600; color: #94a3b8; }
+        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 12px; font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.3s, box-shadow 0.3s; }
+        input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 12px; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .profile-upload-area { display: flex; flex-direction: column; align-items: center; margin: 20px 0; }
+        .profile-preview { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #4f46e5; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); margin-bottom: 15px; background: #f1f5f9; transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .profile-preview:hover { transform: scale(1.08); }
+        .upload-btn { background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .upload-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.45); }
+
+        #custom-alert-modal .modal-card { max-width: 320px; padding: 25px; }
+        #custom-alert-modal h3 { margin-top: 0; color: var(--text-main); font-size: 1.3rem; }
+        #custom-alert-modal p { margin: 15px 0; color: #64748b; font-size: 1rem; }
+        #custom-alert-modal .btn { width: 100%; background: var(--primary-grad); border: none; color: white; padding: 12px; border-radius: 50px; font-weight: 700; cursor: pointer; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        #custom-alert-modal .btn:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45); }
+
+        a, button, .app-item, .highlight-card, .social-bubble { transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        /* Pricing Module */
+        .price-module { background: #0f0f0f; color: white; display: flex; justify-content: center; align-items: center; padding: 30px 16px; border-radius: 24px; margin: 20px auto 40px auto; max-width: 550px; box-sizing: border-box; }
+        .price-module * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        .price-module .card { width: 100%; max-width: 500px; background: #171717; border: 1px solid #2b2b2b; border-radius: 24px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.5s; position: relative; z-index: 1; }
+        .price-module h1 { font-size: 34px; margin-bottom: 12px; font-weight: 600; margin-top: 0; color: white; text-align: left; }
+        .price-module .desc { color: #9e9e9e; font-size: 15px; line-height: 1.6; margin-bottom: 28px; text-align: left; }
+        .price-module .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: nowrap; gap: 12px; position: relative; z-index: 50; width: 100%; }
+        .price-module .price { font-size: 44px; font-weight: 700; transition: transform 0.2s ease; white-space: nowrap; flex-shrink: 0; color: white; margin: 0; }
+        .price-module .price-pop { animation: pricePop 0.3s ease; }
+        .price-module .custom-select { position: relative; flex: 1; min-width: 0; max-width: 240px; user-select: none; }
+        .price-module .select-selected { background: #242424; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.3s; border: 1px solid #333; font-size: 14px; touch-action: manipulation; width: 100%; min-width: 0; color: white; }
+        .price-module .select-selected:hover { background: #2e2e2e; border-color: #555; }
+        .price-module #selectFlag { flex-shrink: 0; }
+        .price-module #selectText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+        .price-module .select-selected .arrow { margin-left: auto; transition: transform 0.3s ease; font-size: 16px; color: #aaa; flex-shrink: 0; }
+        .price-module .custom-select.open .arrow { transform: rotate(180deg); }
+        .price-module .country-dropdown { position: absolute; top: calc(100% + 6px); left: 0; width: 100%; background: #1c1c1c; border: 1px solid #444; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; display: none; z-index: 1000; }
+        .price-module .custom-select.open .country-dropdown { display: block; }
+        .price-module .country-list div { padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #252525; font-size: 15px; font-weight: 500; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .price-module .country-list div:last-child { border-bottom: none; }
+        .price-module .country-list div:active { background: #333; }
+        .price-module .country-list div.same-as-selected { background: #333; font-weight: 700; color: #fff; border-left: 4px solid #4a90e2; }
+        .price-module .dropdown-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 999; display: none; }
+        .price-module .custom-select.open .dropdown-backdrop { display: block; }
+        .price-module .currency-info { color: #8c8c8c; font-size: 13px; margin-bottom: 28px; min-height: 20px; text-align: left; }
+        .price-module .features { list-style: none; margin-bottom: 30px; transition: filter 0.3s ease, opacity 0.3s ease; padding: 0; text-align: left; }
+        .price-module .features.blurred { filter: blur(5px); opacity: 0.4; pointer-events: none; }
+        .price-module .features li { padding: 12px 0; color: #dddddd; font-size: 15px; }
+        .price-module .btn { width: 100%; border: none; background: white; color: black; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s ease, opacity 0.3s; text-align: center; }
+        .price-module .btn:hover { opacity: 0.9; transform: scale(1.01); }
+        .price-module .animate-fade { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+
+        @media screen and (max-width: 480px) {
+            .price-module .card { padding: 24px 20px; }
+            .price-module h1 { font-size: 28px; }
+            .price-module .price { font-size: 32px; }
+            .price-module .select-selected { padding: 10px 12px; font-size: 13px; }
+        }
+
+        @media (max-width: 768px) {
+            .profile-card { padding: 30px 18px; }
+            .profile-img { width: 100px; height: 100px; }
+            .username { font-size: 1.5rem; }
+            .samples-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 20px 10px; }
+            .app-icon { width: 70px; height: 70px; min-width: 70px; }
+            .highlight-card { width: 65px; height: 65px; min-width: 65px; }
+            .highlights-track { gap: 12px; }
+            #chat-history { padding: 15px; gap: 8px; }
+            .msg { max-width: 90%; font-size: 0.9rem; padding: 10px 14px; }
+            .chat-input-row { padding: 8px 10px; gap: 6px; }
+            #chat-input { font-size: 0.85rem; padding: 6px 8px; }
+            .chat-send-btn { padding: 8px 14px; }
+            .chat-header-label { font-size: 0.95rem; top: 19px; left: 48px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SKELETON -->
+    <div id="skeleton-view" class="container" style="max-width: 500px; margin: 0 auto;">
+        <div class="skeleton" style="height: 280px; margin-bottom: 30px;"></div>
+        <div class="skeleton" style="height: 30px; width: 120px; margin-bottom: 20px;"></div>
+        <div style="display:flex; gap:15px; overflow:hidden;">
+            <div class="skeleton" style="width:85px; height:85px; border-radius:50%"></div>
+            <div class="skeleton" style="width:85px; height:85px; border-radius:50%"></div>
+            <div class="skeleton" style="width:85px; height:85px; border-radius:50%"></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="main-view" class="container hidden">
+        <div class="main-layout">
+            <div class="profile-wrapper reveal-on-scroll">
+                <div class="profile-card">
+                    <div id="scene-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></div>
+                    <img id="u-profile-pic" class="profile-img" src="" alt="Profile Logo"
+                    onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22%3E%3Ccircle cx=%2275%22 cy=%2275%22 r=%2275%22 fill=%22%23e2e8f0%22/%3E%3Ccircle cx=%2275%22 cy=%2260%22 r=%2228%22 fill=%22%2394a3b8%22/%3E%3Cellipse cx=%2275%22 cy=%22120%22 rx=%2238%22 ry=%2222%22 fill=%22%2394a3b8%22/%3E%3C/svg%3E';this.style.objectFit='cover';">
+                    <h1 id="u-username" class="username animate-fade-in-up delay-100">...</h1>
+                    <button class="about-btn btn-click animate-fade-in-up delay-200" onclick="window.openPage('about-page')">About Me</button>
+                    <div class="section-label animate-fade-in-up delay-200" style="color:#94a3b8; margin-top:30px; margin-bottom:15px">Connect With Me</div>
+                    <div id="u-connect-top" class="connect-row animate-fade-in-up delay-300"></div>
+                    <a href="mailto:mrperfectguide.in@gmail.com" class="email-btn btn-click animate-fade-in-up delay-300">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        mrperfectguide.in@gmail.com
+                    </a>
+                </div>
+            </div>
+
+            <div class="content-wrapper" style="position: relative;">
+                <div id="chat-drone-box" style="position: absolute; width: 80px; height: 80px; top: 10px; left: 10px; z-index: 50; cursor: pointer; transition: top 5s ease-in-out, left 5s ease-in-out;" onclick="window.openChat()"></div>
+
+                <div class="section-label label-green reveal-on-scroll" style="text-align:left">Highlights</div>
+                <div class="highlights-wrapper reveal-on-scroll">
+                    <div id="u-highlights" class="highlights-track"></div>
+                </div>
+                <div class="section-label label-red reveal-on-scroll" style="text-align:left">Samples</div>
+                <div id="u-samples" class="samples-grid reveal-on-scroll"></div>
+                <div class="section-label label-sale reveal-on-scroll" style="text-align:left; margin-top:40px;">For Sale</div>
+                <div id="u-sales" class="samples-grid reveal-on-scroll"></div>
+            </div>
+
+            <div class="bottom-section reveal-on-scroll">
+                <!-- Custom Pricing Module -->
+                <div class="price-module">
+                    <div class="card" id="mainCard">
+                        <h1 class="animate-fade" style="animation-delay: 0.1s">Custom +</h1>
+                        <p class="desc animate-fade" style="animation-delay: 0.15s">
+                            Full-Stack Development starts from the base price. Final cost depends on UI/UX complexity, features, and overall project scope. Smaller projects are quoted separately.
+                        </p>
+                        <div class="top animate-fade" style="animation-delay: 0.2s">
+                            <div class="price" id="custom-price-val">$15+</div>
+                            <div class="custom-select" id="customSelect">
+                                <div class="select-selected" id="selectButton">
+                                    <span id="selectFlag">🇺🇸</span>
+                                    <span id="selectText">United States (USD)</span>
+                                    <span class="arrow">▾</span>
+                                </div>
+                                <div class="country-dropdown" id="countryDropdown">
+                                    <div class="country-list" id="countryList"></div>
+                                </div>
+                                <div class="dropdown-backdrop" id="dropdownBackdrop"></div>
+                            </div>
+                        </div>
+                        <div class="currency-info animate-fade" id="currencyInfo" style="animation-delay: 0.25s"></div>
+                        <ul class="features animate-fade" id="featuresList" style="animation-delay: 0.3s">
+                            <li>Free sub domain</li>
+                            <li>Free hosting</li>
+                            <li>System security</li>
+                            <li>Code security</li>
+                            <li>API / API Key</li>
+                            <li>Real time update</li>
+                        </ul>
+                        <button class="btn animate-fade btn-click" style="animation-delay: 0.35s" onclick="window.openChatWithProject('Custom Project Request', true)">Start Your Project</button>
+                    </div>
+                </div>
+                <!-- End Custom Pricing -->
+
+                <div class="section-label" style="text-align:center; color:#94a3b8;">Follow Me</div>
+                <div id="u-connect-bottom" class="connect-row"></div>
+                <br>
+                <footer>&copy; 2026 MR Perfect.</footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABOUT PAGE -->
+    <div id="about-page" class="page-overlay hidden">
+        <button class="nav-btn-float" onclick="window.closePage('about-page')" aria-label="Back">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6L8 12L14 18"/></svg>
+        </button>
+        <button class="nav-btn-float" style="left:auto; right:16px; color:#4f46e5;" onclick="window.openChat()" aria-label="Chat">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </button>
+        <div class="scroll-content">
+            <h1 class="username" style="font-size:2.5rem; text-align:left; margin-bottom:20px">About Me</h1>
+            <p id="u-about-text" style="line-height:1.8; color:var(--text-sub); font-size:1.1rem; white-space:pre-wrap;">Loading...</p>
+        </div>
+    </div>
+
+    <!-- DETAILS PAGE -->
+    <div id="details-page" class="page-overlay hidden">
+        <button class="nav-btn-float" onclick="window.closeDetails()" aria-label="Back">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6L8 12L14 18"/></svg>
+        </button>
+        <div class="scroll-content">
+            <img id="d-logo" class="d-logo" src="" alt="Project Logo" onerror="this.style.display='none'">
+            <h2 id="d-name" class="username" style="text-align:center; font-size:1.8rem; margin-bottom:25px;">Sample Name</h2>
+            <div id="d-price" style="font-size:1.2rem; font-weight:700; color:#10b981; margin-bottom:15px; text-align:center;"></div>
+            <div id="action-buttons" style="display:flex; justify-content:center; gap:15px; margin-bottom:30px;"></div>
+            <div id="d-slider" class="slider-box"></div>
+            <div id="project-links-area" class="project-links-container"></div>
+            <div id="d-desc" style="background:#fff; padding:30px; border-radius:24px; color:var(--text-sub); line-height:1.8; box-shadow:0 10px 30px rgba(0,0,0,0.02);"></div>
+        </div>
+    </div>
+
+    <!-- RUNNER PAGE -->
+    <div id="runner-page" class="page-overlay hidden" style="background:#fff">
+        <button id="drag-exit-btn" class="exit-pill-float">
+            <span style="font-size:1.2rem; line-height:0">×</span> Exit View
+        </button>
+        <div id="iframe-container" style="width:100%; height:100%; position:relative;"></div>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" class="modal-wrap hidden">
+        <div class="modal-card">
+            <button onclick="window.closePage('auth-modal')" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.5rem; cursor:pointer; color:#94a3b8;">✕</button>
+            <h2 id="auth-title" style="margin-top:0; color:var(--text-main);">Login</h2>
+
+            <div id="signup-fields" style="display: none;">
+                <div class="profile-upload-area">
+                    <img id="profile-preview" class="profile-preview" src="" alt="Preview" style="background: #f1f5f9;" onerror="this.style.display='none'">
+                    <input type="file" id="profile-upload" accept="image/*" style="display: none;">
+                    <button type="button" class="upload-btn btn-click" onclick="document.getElementById('profile-upload').click()">Upload Photo</button>
+                </div>
+                <input type="text" id="auth-name" placeholder="Full Name">
+            </div>
+
+            <input type="email" id="auth-email" placeholder="Email Address">
+            <input type="password" id="auth-pass" placeholder="Password">
+            <div id="recaptcha-container" style="margin: 15px 0; display: flex; justify-content: center;"></div>
+            <button class="view-code-btn btn-click" style="margin-top:15px; width:100%; background:#0f172a;" onclick="window.handleAuth()" id="auth-submit-btn">Login</button>
+            <div id="forgot-pass-link" style="color:var(--text-sub); font-size:0.9rem; cursor:pointer; margin-top:15px;" onclick="window.handleReset()">Forgot Password?</div>
+            <div id="auth-switch" style="color:#4f46e5; font-weight:700; cursor:pointer; margin-top:15px; font-size:0.9rem;" onclick="window.toggleAuth()">New? Create Account</div>
+        </div>
+    </div>
+
+    <!-- CHAT PAGE -->
+    <div id="chat-modal" class="page-overlay hidden">
+        <button class="nav-btn-float" onclick="window.closePage('chat-modal')" aria-label="Back">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6L8 12L14 18"/></svg>
+        </button>
+        <span class="chat-header-label" id="chat-header-label">Support Chat</span>
+        <div class="scroll-content" style="display: flex; flex-direction: column; height: 100vh; padding-bottom: 30px; padding-top: 70px;">
+            <h1 id="chat-modal-title" class="username" style="font-size:2rem; text-align:left; margin-bottom:15px;">Support Chat</h1>
+            
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <button id="chat-mode-admin" class="btn-click" style="flex:1; padding:12px; border-radius:12px; font-weight:700; border:none; background:#4f46e5; color:#fff; cursor:pointer;" onclick="window.switchChatMode('admin')">Admin</button>
+                <button id="chat-mode-bot" class="btn-click" style="flex:1; padding:12px; border-radius:12px; font-weight:700; border:none; background:#e2e8f0; color:#64748b; cursor:pointer;" onclick="window.switchChatMode('bot')">Bot</button>
+            </div>
+
+            <div id="chat-history"></div>
+            <div class="chat-input-row">
+                <input id="chat-input" type="text" placeholder="Type a message..." style="margin:0; border-radius:50px; padding-left:20px;">
+                <button class="chat-send-btn btn-click" onclick="window.sendMsg()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM ALERT MODAL -->
+    <div id="custom-alert-modal" class="modal-wrap hidden">
+        <div class="modal-card">
+            <h3 id="alert-title">Alert</h3>
+            <p id="alert-message"></p>
+            <button class="btn btn-click" onclick="window.closeCustomAlert()">OK</button>
+        </div>
+    </div>
+
+    <div id="toast">Link Copied!</div>
+
+    <!-- Inlined JavaScript from frontend.js -->
+    <script>
+        // --- CONFIGURATION ---
+        const API_BASE = 'https://mrxperfect.vercel.app/api'; // Vercel will rewrite this to your backend
+
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        let isLogin = true;
+        let allSamples =[];
+        let currentProjectName = '';
+        let purchaseRequestMode = false;
+        let currentChatMode = 'admin';
+        let botChatHistory =[];
+        let cloudName = '';
+        let uploadPreset = '';
+
+        let chatInterval = null; // for polling admin messages if needed
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchConfig();
+            fetchPortfolio();
+            fetchSamples();
+            init3DScene();
+            initChatBotDrone();
+            document.getElementById('chat-header-label').style.display = 'none';
+            if (window.initCustomPricing) window.initCustomPricing();
+        });
+
+        // Fetch backend configs (Cloudinary, reCAPTCHA)
+        async function fetchConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/config`);
+                const config = await res.json();
+                cloudName = config.cloudName;
+                uploadPreset = config.uploadPreset;
+
+                // Dynamically load reCAPTCHA
+                if (config.recaptchaSiteKey) {
+                    const script = document.createElement('script');
+                    script.src = `https://www.google.com/recaptcha/api.js?render=explicit`;
+                    script.async = true;
+                    script.defer = true;
+                    script.onload = () => {
+                        window.recaptchaWidgetId = grecaptcha.render('recaptcha-container', {
+                            'sitekey': config.recaptchaSiteKey
+                        });
+                    };
+                    document.head.appendChild(script);
+                }
+            } catch (e) { console.error('Failed to load config:', e); }
+        }
+
+        // --- UTILS ---
+        function escapeHTML(str) {
+            return str.replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m] || m));
+        }
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.innerText = msg;
+            t.className = "show";
+            setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+        }
+        function showCustomAlert(message, title = 'Alert') {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-message').innerText = message;
+            openPage('custom-alert-modal');
+        }
+        window.closeCustomAlert = () => closePage('custom-alert-modal');
+
+        // --- NAVIGATION / REVEAL ---
+        let revealObserver = null;
+        function initRevealObserver() {
+            if (revealObserver) {
+                document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+                    if (!el.dataset.revealObserved) { el.dataset.revealObserved = 'true'; revealObserver.observe(el); }
+                });
+                return;
+            }
+            revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) entry.target.classList.add('is-visible');
+                    else entry.target.classList.remove('is-visible');
+                });
+            }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+            document.querySelectorAll('.reveal-on-scroll').forEach(el => {
+                el.dataset.revealObserved = 'true'; revealObserver.observe(el);
+            });
+        }
+
+        window.openPage = function(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            if (id === 'chat-modal') document.getElementById('chat-header-label').style.display = 'block';
+            setTimeout(() => {
+                if (revealObserver) {
+                    el.querySelectorAll('.reveal-on-scroll').forEach(child => {
+                        child.classList.remove('is-visible');
+                        if (!child.dataset.revealObserved) { child.dataset.revealObserved = 'true'; revealObserver.observe(child); }
+                    });
+                }
+            }, 50);
+        }
+
+        window.closePage = function(id) {
+            if (id === 'auth-modal' && typeof grecaptcha !== 'undefined' && window.recaptchaWidgetId !== undefined) {
+                grecaptcha.reset(window.recaptchaWidgetId);
+            }
+            if (id === 'chat-modal') {
+                clearInterval(chatInterval);
+                document.getElementById('chat-header-label').style.display = 'none';
+            }
+            document.getElementById(id).classList.add('hidden');
+        }
+        window.closeDetails = () => { closePage('details-page'); history.replaceState(null, null, ' '); }
+
+        // --- FETCH DATA ---
+        async function fetchPortfolio() {
+            try {
+                const res = await fetch(`${API_BASE}/portfolio`);
+                const d = await res.json();
+                
+                document.getElementById('skeleton-view').classList.add('hidden');
+                document.getElementById('main-view').classList.remove('hidden');
+
+                if (d.profilePic) document.getElementById('u-profile-pic').src = d.profilePic;
+                document.getElementById('u-username').innerText = d.username || 'User';
+                document.getElementById('u-about-text').innerText = d.aboutMe || '';
+
+                const getBrandColor = (url) => {
+                    if (!url) return { color: '#4f46e5', glow: 'rgba(79,70,229,0.3)' };
+                    url = url.toLowerCase();
+                    if (url.includes('facebook')) return { color: '#1877F2', glow: 'rgba(24,119,242,0.4)' };
+                    if (url.includes('instagram')) return { color: '#E1306C', glow: 'rgba(225,48,108,0.4)' };
+                    if (url.includes('t.me') || url.includes('telegram')) return { color: '#229ED9', glow: 'rgba(34,158,217,0.4)' };
+                    if (url.includes('youtube')) return { color: '#FF0000', glow: 'rgba(255,0,0,0.4)' };
+                    if (url.includes('twitter') || url.includes('x.com')) return { color: '#000000', glow: 'rgba(0,0,0,0.3)' };
+                    if (url.includes('whatsapp') || url.includes('wa.me')) return { color: '#25D366', glow: 'rgba(37,211,102,0.4)' };
+                    if (url.includes('linkedin')) return { color: '#0A66C2', glow: 'rgba(10,102,194,0.4)' };
+                    if (url.includes('github')) return { color: '#333333', glow: 'rgba(51,51,51,0.4)' };
+                    return { color: '#4f46e5', glow: 'rgba(79,70,229,0.3)' };
+                };
+
+                let t = '', b = '', h = '';
+                if (d.socialsTop) d.socialsTop.forEach(s => {
+                    const brand = getBrandColor(s.link);
+                    t += `<a href="${s.link}" class="social-bubble" style="--brand-color: ${brand.color}; --brand-glow: ${brand.glow};" target="_blank">${s.svg}</a>`;
+                });
+                if (d.socialsBottom) d.socialsBottom.forEach(s => {
+                    const brand = getBrandColor(s.link);
+                    b += `<a href="${s.link}" class="social-bubble" style="--brand-color: ${brand.color}; --brand-glow: ${brand.glow};" target="_blank">${s.svg}</a>`;
+                });
+                if (d.highlights) {
+                    const cardsHTML = d.highlights.map(i => `<div class="highlight-card" onclick="window.open('${i.url}','_blank')"><img src="${i.logo}" loading="lazy"></div>`).join('');
+                    h = cardsHTML + cardsHTML;
+                }
+
+                document.getElementById('u-connect-top').innerHTML = t;
+                document.getElementById('u-connect-bottom').innerHTML = b;
+                document.getElementById('u-highlights').innerHTML = h;
+                initRevealObserver();
+            } catch (e) { console.error("Error fetching portfolio", e); }
+        }
+
+        async function fetchSamples() {
+            try {
+                const res = await fetch(`${API_BASE}/samples`);
+                allSamples = await res.json();
+                
+                const freeGrid = document.getElementById('u-samples');
+                const salesGrid = document.getElementById('u-sales');
+                freeGrid.innerHTML = ''; salesGrid.innerHTML = '';
+
+                allSamples.forEach(s => {
+                    const name = s.name || s.projectName || 'Untitled';
+                    const isForSale = s.isForSale === true;
+                    const price = s.price ? `${s.currency || '$'}${s.price}` : '';
+                    const html = `<div class="app-item" onclick="window.showSample('${s.id}')">
+                        <div class="app-icon"><img src="${s.logo}" loading="lazy" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23e2e8f0%22/%3E%3C/svg%3E';"></div>
+                        <div class="app-name">${escapeHTML(name)}</div>
+                        ${isForSale ? `<div class="app-price">${escapeHTML(price)}</div>` : ''}
+                    </div>`;
+                    if (isForSale) salesGrid.innerHTML += html;
+                    else freeGrid.innerHTML += html;
+                });
+
+                const pid = new URLSearchParams(location.search).get('id');
+                if (pid) window.showSample(pid);
+                setTimeout(() => { if (revealObserver) initRevealObserver(); }, 100);
+            } catch (e) { console.error("Error fetching samples", e); }
+        }
+
+        window.showSample = function(id) {
+            const s = allSamples.find(x => x.id === id);
+            if (!s) return;
+            history.pushState({}, '', '?id=' + id);
+            document.getElementById('d-logo').src = s.logo || '';
+            document.getElementById('d-logo').style.display = s.logo ? 'block' : 'none';
+            document.getElementById('d-name').innerText = s.name || s.projectName;
+            document.getElementById('d-desc').innerText = s.description;
+
+            const priceEl = document.getElementById('d-price');
+            if (s.isForSale && s.price) {
+                priceEl.innerText = `${s.currency || '$'}${s.price}`;
+                priceEl.style.display = 'block';
+            } else { priceEl.style.display = 'none'; }
+
+            const box = document.getElementById('d-slider');
+            box.innerHTML = '';
+            (s.screenshots || [s.screenshot]).forEach(url => box.innerHTML += `<img class="slide-img" src="${url}" loading="lazy">`);
+
+            const btnC = document.getElementById('project-links-area');
+            btnC.innerHTML = '';
+            if (s.links && s.links.length) {
+                s.links.forEach((link, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = idx === 0 ? 'view-code-btn btn-click' : 'view-code-btn secondary btn-click';
+                    btn.innerHTML = '▶ View Project';
+                    btn.onclick = () => window.open(link, '_blank');
+                    btnC.appendChild(btn);
+                });
+            }
+
+            const actionDiv = document.getElementById('action-buttons');
+            actionDiv.innerHTML = '';
+            const baseStyle = 'background:#fff;padding:10px 20px;border-radius:30px;box-shadow:0 4px 10px rgba(0,0,0,0.05);cursor:pointer;display:flex;gap:8px;color:var(--text-sub);font-weight:700;border:1px solid #e2e8f0;transition:all 0.35s;';
+            
+            const cb = document.createElement('div');
+            cb.setAttribute('onclick', `window.openChatWithProject('${escapeHTML(s.name || s.projectName)}', ${s.isForSale})`);
+            cb.style.cssText = baseStyle;
+            cb.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ${s.isForSale ? 'Chat to Buy' : 'Chat'}`;
+            cb.classList.add('btn-click');
+            actionDiv.appendChild(cb);
+
+            openPage('details-page');
+        }
+
+        // --- AUTH ---
+        window.toggleAuth = function() {
+            isLogin = !isLogin;
+            document.getElementById('auth-title').innerText = isLogin ? 'Login' : 'Create Account';
+            document.getElementById('auth-submit-btn').innerText = isLogin ? 'Login' : 'Sign Up';
+            document.getElementById('auth-switch').innerText = isLogin ? 'New? Create Account' : 'I have account';
+            document.getElementById('forgot-pass-link').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('signup-fields').style.display = isLogin ? 'none' : 'block';
+        }
+
+        document.getElementById('profile-upload').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file || !cloudName) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('upload_preset', uploadPreset);
+            try {
+                const r = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd });
+                const data = await r.json();
+                if (data.secure_url) {
+                    document.getElementById('profile-preview').src = data.secure_url;
+                    document.getElementById('profile-preview').style.display = 'block';
+                    window.profilePicUrl = data.secure_url;
+                }
+            } catch(err) { showCustomAlert('Upload failed'); }
+        });
+
+        window.handleAuth = async function() {
+            let recaptchaToken = '';
+            if (typeof grecaptcha !== 'undefined' && window.recaptchaWidgetId !== undefined) {
+                recaptchaToken = grecaptcha.getResponse(window.recaptchaWidgetId);
+                if (!recaptchaToken) return showCustomAlert('Please complete the reCAPTCHA');
+            }
+
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-pass').value;
+            if (!email || !password) return showCustomAlert("Email and password required");
+
+            const endpoint = isLogin ? '/auth/login' : '/auth/signup';
+            const body = { email, password, recaptcha: recaptchaToken };
+            if (!isLogin) {
+                body.name = document.getElementById('auth-name').value;
+                body.profilePic = window.profilePicUrl || '';
+                if (!body.name) return showCustomAlert("Name required");
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                currentUser = { token: data.token, uid: data.uid, email: data.email };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                if (typeof grecaptcha !== 'undefined' && window.recaptchaWidgetId !== undefined) grecaptcha.reset(window.recaptchaWidgetId);
+                closePage('auth-modal');
+                if (document.getElementById('chat-modal').classList.contains('hidden') === false) openChat();
+            } catch (err) {
+                if (typeof grecaptcha !== 'undefined' && window.recaptchaWidgetId !== undefined) grecaptcha.reset(window.recaptchaWidgetId);
+                showCustomAlert(err.message);
+            }
+        }
+
+        window.handleReset = async function() {
+            const email = document.getElementById('auth-email').value;
+            if (!email) return showCustomAlert("Enter email first!");
+            try {
+                const res = await fetch(`${API_BASE}/auth/reset`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if(res.ok) showCustomAlert("Reset link sent!");
+                else throw new Error("Failed to send reset link");
+            } catch(e) { showCustomAlert(e.message); }
+        }
+
+        // --- CHAT SYSTEM ---
+        window.openChatWithProject = function(projectName, isPurchase = false) {
+            currentProjectName = projectName || '';
+            purchaseRequestMode = isPurchase;
+            openChat();
+        }
+
+        window.openChat = function() {
+            if (!currentUser) { 
+                showCustomAlert("You need to login first.");
+                openPage('auth-modal'); 
+                return; 
+            }
+            document.getElementById('chat-modal-title').innerText = purchaseRequestMode ? 'Purchase Request' : 'Support Chat';
+            document.getElementById('chat-header-label').innerText = purchaseRequestMode ? 'Purchase Request' : 'Support Chat';
+            openPage('chat-modal');
+            window.switchChatMode('admin'); 
+        }
+
+        window.switchChatMode = function(mode) {
+            currentChatMode = mode;
+            const btnAdmin = document.getElementById('chat-mode-admin');
+            const btnBot = document.getElementById('chat-mode-bot');
+            clearInterval(chatInterval);
+
+            if(mode === 'admin') {
+                btnAdmin.style.background = '#4f46e5'; btnAdmin.style.color = '#fff';
+                btnBot.style.background = '#e2e8f0'; btnBot.style.color = '#64748b';
+                loadAdminChat();
+                chatInterval = setInterval(loadAdminChat, 3000); // Poll for new admin messages
+            } else {
+                btnBot.style.background = '#4f46e5'; btnBot.style.color = '#fff';
+                btnAdmin.style.background = '#e2e8f0'; btnAdmin.style.color = '#64748b';
+                loadBotChat();
+            }
+        }
+
+        async function loadAdminChat() {
+            try {
+                const res = await fetch(`${API_BASE}/chat/messages`, {
+                    headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                });
+                if (!res.ok) {
+                    if(res.status === 401) { currentUser = null; localStorage.removeItem('currentUser'); closePage('chat-modal'); showCustomAlert("Session expired. Please login again."); }
+                    return;
+                }
+                const msgs = await res.json();
+                const div = document.getElementById('chat-history');
+                div.innerHTML = '';
+                if (msgs.length === 0) div.innerHTML = '<div class="msg admin">Hello! How can I help you?</div>';
+                else msgs.forEach(m => {
+                    const safe = escapeHTML(m.text);
+                    div.innerHTML += m.isAdmin ? `<div class="msg admin">${safe}</div>` : `<div class="msg me">${safe}</div>`;
+                });
+                div.scrollTop = div.scrollHeight;
+            } catch(e) {}
+        }
+
+        function loadBotChat() {
+            const stored = localStorage.getItem('mrperfect_bot_chat');
+            botChatHistory = stored ? JSON.parse(stored) :[];
+            const div = document.getElementById('chat-history');
+            div.innerHTML = '';
+            if (botChatHistory.length === 0) {
+                div.innerHTML = '<div class="msg admin">Hi! I am the AI Bot. How can I help you today?</div>';
+            } else {
+                botChatHistory.forEach(msg => {
+                    const safe = escapeHTML(msg.content);
+                    div.innerHTML += msg.role === 'user' ? `<div class="msg me">${safe}</div>` : `<div class="msg admin">${safe}</div>`;
+                });
+            }
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function saveBotChat() { localStorage.setItem('mrperfect_bot_chat', JSON.stringify(botChatHistory)); }
+
+        function showTypingAnimation() {
+            const div = document.getElementById('chat-history');
+            const id = 'typing-' + Date.now();
+            div.innerHTML += `<div id="${id}" class="msg admin" style="display:flex; gap:6px; align-items:center; padding:16px 18px;">
+                <span style="width:6px; height:6px; background:#94a3b8; border-radius:50%; animation: floatBubble 1s infinite alternate;"></span>
+                <span style="width:6px; height:6px; background:#94a3b8; border-radius:50%; animation: floatBubble 1s infinite alternate; animation-delay: 0.2s;"></span>
+                <span style="width:6px; height:6px; background:#94a3b8; border-radius:50%; animation: floatBubble 1s infinite alternate; animation-delay: 0.4s;"></span>
+            </div>`;
+            div.scrollTop = div.scrollHeight;
+            return id;
+        }
+
+        window.sendMsg = async function() {
+            const input = document.getElementById('chat-input');
+            let txt = input.value.trim();
+            if (!txt) return;
+
+            if (currentProjectName) { txt = `{ ${currentProjectName} } ${txt}`; currentProjectName = ''; }
+
+            if (currentChatMode === 'admin') {
+                try {
+                    await fetch(`${API_BASE}/chat/message`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentUser.token}` },
+                        body: JSON.stringify({ text: txt })
+                    });
+                    input.value = ''; input.focus();
+                    loadAdminChat(); // instant visual update
+                } catch(e) { showToast('Error sending message'); }
+            } else {
+                const div = document.getElementById('chat-history');
+                div.innerHTML += `<div class="msg me">${escapeHTML(txt)}</div>`;
+                div.scrollTop = div.scrollHeight;
+                botChatHistory.push({role: 'user', content: txt});
+                saveBotChat();
+                input.value = ''; input.focus();
+
+                const typingId = showTypingAnimation();
+                try {
+                    const res = await fetch(`${API_BASE}/chat/bot`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ history: botChatHistory })
+                    });
+                    const data = await res.json();
+                    document.getElementById(typingId)?.remove();
+                    
+                    const reply = data.reply || "Sorry, I am unable to respond.";
+                    div.innerHTML += `<div class="msg admin">${escapeHTML(reply)}</div>`;
+                    div.scrollTop = div.scrollHeight;
+                    botChatHistory.push({role:'assistant', content:reply});
+                    saveBotChat();
+                } catch (e) {
+                    document.getElementById(typingId)?.remove();
+                    div.innerHTML += `<div class="msg admin">Error connecting to AI.</div>`;
+                    div.scrollTop = div.scrollHeight;
+                }
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('chat-modal').classList.contains('hidden')) {
+                if (document.activeElement === document.getElementById('chat-input')) {
+                    e.preventDefault(); window.sendMsg();
+                }
+            }
+        });
+
+        // --- PRICING MODULE LOGIC ---
+        window.initCustomPricing = function() {
+            const BASE_USD = 15;
+            let rates = {};
+            let exchangeRatesReady = false;
+            let currentCurrency = "USD";
+
+            const customSelect = document.getElementById("customSelect");
+            const selectButton = document.getElementById("selectButton");
+            const selectFlag = document.getElementById("selectFlag");
+            const selectText = document.getElementById("selectText");
+            const countryList = document.getElementById("countryList");
+            const featuresList = document.getElementById("featuresList");
+            const backdrop = document.getElementById("dropdownBackdrop");
+
+            selectButton.addEventListener("click", (e) => {
+                e.stopPropagation(); customSelect.classList.toggle("open"); featuresList.classList.toggle("blurred");
+            });
+
+            backdrop.addEventListener("click", () => {
+                customSelect.classList.remove("open"); featuresList.classList.remove("blurred");
+            });
+
+            countryList.addEventListener("click", (e) => {
+                const target = e.target.closest("div[data-value]");
+                if (!target) return;
+                e.stopPropagation();
+                selectCurrency(target.getAttribute("data-value"), target.getAttribute("data-flag"), target.getAttribute("data-name"));
+            });
+
+            function selectCurrency(code, flag, name) {
+                currentCurrency = code;
+                selectFlag.textContent = flag; selectText.textContent = `${name} (${code})`;
+                Array.from(countryList.children).forEach(child => { child.classList.toggle("same-as-selected", child.getAttribute("data-value") === code); });
+                if (exchangeRatesReady || code === "USD") updatePrice(code);
+                customSelect.classList.remove("open"); featuresList.classList.remove("blurred");
+            }
+
+            function getFlagEmoji(countryCode) {
+                const codePoints = countryCode.toUpperCase().split("").map(char => 127397 + char.charCodeAt(0));
+                return String.fromCodePoint(...codePoints);
+            }
+
+            async function loadPricingData() {
+                try {
+                    const res = await fetch(`${API_BASE}/public/countries`);
+                    const countries = await res.json();
+                    countries.sort((a, b) => a.name.ccommon.localeCompare(b.name.ccommon));
+
+                    countryList.innerHTML = "";
+                    countries.forEach(country => {
+                        const currencyKeys = country.currencies ? Object.keys(country.currencies) :[];
+                        if (currencyKeys.length === 0) return;
+                        const cCode = currencyKeys[0];
+                        const flag = getFlagEmoji(country.cca2);
+                        const div = document.createElement("div");
+                        div.setAttribute("data-value", cCode); div.setAttribute("data-flag", flag); div.setAttribute("data-name", country.name.ccommon);
+                        div.innerHTML = `<span>${flag}</span> <span>${country.name.ccommon} (${cCode})</span>`;
+                        countryList.appendChild(div);
+                    });
+
+                    // Detect IP and Rates simultaneously
+                    Promise.all([
+                        fetch(`${API_BASE}/public/ip`).then(r=>r.json()).catch(()=>({})),
+                        fetch(`${API_BASE}/public/rates`).then(r=>r.json()).catch(()=>({}))
+                    ]).then(([ipData, rateData]) => {
+                        if(rateData.rates) { rates = rateData.rates; exchangeRatesReady = true; }
+                        
+                        let userCountryCode = ipData.country_code ? ipData.country_code.toUpperCase() : null;
+                        if(userCountryCode) {
+                            const matched = countries.find(c => c.cca2 === userCountryCode && c.currencies && Object.keys(c.currencies).length);
+                            if(matched) selectCurrency(Object.keys(matched.currencies)[0], getFlagEmoji(matched.cca2), matched.name.ccommon);
+                        } else {
+                            selectCurrency("USD", getFlagEmoji("US"), "United States");
+                        }
+                    });
+
+                } catch (err) { selectText.textContent = "Failed to load"; }
+            }
+
+            function updatePrice(currency) {
+                let price = BASE_USD; let symbol = currency;
+                try {
+                    const parts = new Intl.NumberFormat("en-US", { style: "currency", currency: currency, currencyDisplay: "symbol" }).formatToParts(0);
+                    symbol = (parts.find(p => p.type === "currency") || {}).value || currency;
+                } catch (e) {}
+
+                if (exchangeRatesReady && currency !== "USD" && rates[currency]) price = BASE_USD * rates[currency];
+                
+                const priceEl = document.getElementById("custom-price-val");
+                priceEl.textContent = `${symbol}${Math.round(price)}+`;
+                priceEl.classList.add("price-pop");
+                setTimeout(() => priceEl.classList.remove("price-pop"), 300);
+            }
+
+            document.getElementById("mainCard").style.opacity = "1";
+            document.querySelectorAll(".price-module .features li").forEach((li, i) => {
+                li.style.animation = `fadeInUp 0.5s ease forwards`;
+                li.style.animationDelay = `${0.4 + i * 0.1}s`;
+                li.style.opacity = "0";
+            });
+
+            loadPricingData();
+        };
+
+        // --- DRAG EXIT ---
+        const dragBtn = document.getElementById('drag-exit-btn');
+        let isDragging = false, startX, startY, initialLeft, initialTop;
+        dragBtn.addEventListener('mousedown', startDrag);
+        dragBtn.addEventListener('touchstart', startDrag, { passive: false });
+
+        function startDrag(e) {
+            isDragging = false;
+            const evt = e.type === 'touchstart' ? e.touches[0] : e;
+            startX = evt.clientX; startY = evt.clientY;
+            initialLeft = dragBtn.offsetLeft; initialTop = dragBtn.offsetTop;
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', drag, { passive: false });
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+        }
+        function drag(e) {
+            const evt = e.type === 'touchmove' ? e.touches[0] : e;
+            const dx = evt.clientX - startX, dy = evt.clientY - startY;
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isDragging = true;
+            if (isDragging) {
+                e.preventDefault();
+                let l = initialLeft + dx, t = initialTop + dy;
+                l = Math.min(Math.max(l, 0), window.innerWidth - dragBtn.offsetWidth);
+                t = Math.min(Math.max(t, 0), window.innerHeight - dragBtn.offsetHeight);
+                dragBtn.style.left = l + 'px'; dragBtn.style.top = t + 'px';
+                dragBtn.style.bottom = 'auto'; dragBtn.style.right = 'auto';
+            }
+        }
+        function stopDrag() {
+            document.removeEventListener('mousemove', drag); document.removeEventListener('touchmove', drag);
+            document.removeEventListener('mouseup', stopDrag); document.removeEventListener('touchend', stopDrag);
+            if (!isDragging) window.closePage('runner-page');
+        }
+
+        // --- 3D SCENES ---
+        function init3DScene() {
+            const container = document.getElementById('scene-container');
+            if (!container) return;
+
+            const scene = new THREE.Scene(); scene.background = new THREE.Color(0x050510);
+            const starGeo = new THREE.BufferGeometry();
+            const starArr = new Float32Array(300 * 3);
+            for (let i = 0; i < 900; i++) starArr[i] = (Math.random() - 0.5) * 100;
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starArr, 3));
+            const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, transparent: true, opacity: 0.8 }));
+            scene.add(stars);
+
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 15;
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(10, 10, 10); scene.add(dirLight);
+
+            let drone, earth, droneMixer, earthMixer;
+            const loader = new THREE.GLTFLoader();
+
+            loader.load('earth.glb', gltf => {
+                earth = gltf.scene; earth.scale.set(3, 3, 3); earth.position.set(0, -280, -300); scene.add(earth);
+                if (gltf.animations.length) { earthMixer = new THREE.AnimationMixer(earth); gltf.animations.forEach(c => earthMixer.clipAction(c).play()); }
+            });
+            loader.load('drone.glb', gltf => {
+                drone = gltf.scene; drone.scale.set(0.5, 0.5, 0.5); scene.add(drone);
+                if (gltf.animations.length) { droneMixer = new THREE.AnimationMixer(drone); gltf.animations.forEach(c => droneMixer.clipAction(c).play()); }
+            });
+
+            let userRotX = 0, userRotY = 0, isDraggingDrone = false, previousMouse = {x:0, y:0};
+            const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
+
+            container.addEventListener('pointerdown', e => {
+                const rect = container.getBoundingClientRect();
+                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                if (drone && raycaster.intersectObject(drone, true).length > 0) { isDraggingDrone = true; previousMouse = {x:e.clientX, y:e.clientY}; }
+            });
+            container.addEventListener('pointermove', e => {
+                if (isDraggingDrone && drone) {
+                    userRotX += (e.clientY - previousMouse.y) * 0.01; userRotY += (e.clientX - previousMouse.x) * 0.01;
+                    previousMouse = {x:e.clientX, y:e.clientY};
+                }
+            });
+            container.addEventListener('pointerup', () => isDraggingDrone = false); container.addEventListener('pointerleave', () => isDraggingDrone = false);
+
+            const clock = new THREE.Clock(); let lastFrame = performance.now();
+            function animate() {
+                requestAnimationFrame(animate);
+                const now = performance.now(); if (now - lastFrame < 1000/30) return; lastFrame = now;
+                const delta = clock.getDelta();
+                if (droneMixer) droneMixer.update(delta); if (earthMixer) earthMixer.update(delta);
+                if (earth) earth.rotation.y += 0.002; if (stars) stars.rotation.y += 0.0005;
+                if (drone) {
+                    const time = clock.getElapsedTime();
+                    drone.position.x = Math.sin(time * 0.5) * 4; drone.position.y = Math.cos(time * 0.7) * 2; drone.position.z = Math.sin(time * 0.3) * 2;
+                    drone.rotation.y = (Math.sin(time * 0.8) * 0.5) + userRotY; drone.rotation.x = (Math.sin(time * 1.2) * 0.2) + userRotX; drone.rotation.z = Math.sin(time * 1) * 0.1;
+                }
+                renderer.render(scene, camera);
+            }
+            animate();
+            new ResizeObserver(() => { if (container.clientWidth) { camera.aspect = container.clientWidth/container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); } }).observe(container);
+        }
+
+        function initChatBotDrone() {
+            const container = document.getElementById('chat-drone-box');
+            if (!container) return;
+            const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000); camera.position.z = 10;
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' }); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0)); renderer.setSize(container.clientWidth, container.clientHeight); container.appendChild(renderer.domElement);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8)); const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(5, 10, 7); scene.add(dirLight);
+
+            let chatDrone, mixer;
+            new THREE.GLTFLoader().load('drone_chat_bot.glb', gltf => {
+                chatDrone = gltf.scene; chatDrone.scale.set(10, 10, 10); chatDrone.position.set(0, -1, 0); scene.add(chatDrone);
+                if (gltf.animations.length) { mixer = new THREE.AnimationMixer(chatDrone); gltf.animations.forEach(c => mixer.clipAction(c).play()); }
+            });
+
+            const clock = new THREE.Clock(); let lastFrame = performance.now();
+            function animate() {
+                requestAnimationFrame(animate);
+                const now = performance.now(); if (now - lastFrame < 1000/20) return; lastFrame = now;
+                if (mixer) mixer.update(clock.getDelta());
+                if (chatDrone) { const time = clock.getElapsedTime(); chatDrone.position.y = Math.sin(time * 2) * 0.3 - 1; chatDrone.rotation.y = Math.sin(time * 1.5) * 0.2; chatDrone.rotation.x = Math.sin(time * 2) * 0.1; }
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            function roam() {
+                const wrapper = document.querySelector('.content-wrapper'); if (!wrapper) return;
+                container.style.left = (Math.random() * Math.max(0, wrapper.clientWidth - 80)) + 'px';
+                container.style.top = (Math.random() * Math.max(0, wrapper.clientHeight - 80)) + 'px';
+            }
+            setInterval(roam, 8000); setTimeout(roam, 500);
+            new ResizeObserver(() => { if (container.clientWidth) { camera.aspect = container.clientWidth/container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight); } }).observe(container);
+        }
+    </script>
+</body>
+</html>
