@@ -1,77 +1,77 @@
-const { db } = require('./firebase');
+const { db, auth, collection, doc, getDoc, getDocs, setDoc, query, where, orderBy, addDoc, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } = require('./firebase');
 const { verifyRecaptcha } = require('./recaptcha');
 const { chatWithBot } = require('./openrouter');
-const axios = require('axios');
 
 // Fetch Main Portfolio Data
 const getMainData = async () => {
-    const doc = await db.collection('portfolio').doc('mainData').get();
-    return doc.exists ? doc.data() : {};
+    const docRef = doc(db, 'portfolio', 'mainData');
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data() : {};
 };
 
 // Fetch Public Samples
 const getPublicSamples = async () => {
-    const snap = await db.collection('samples').where('public', '==', true).get();
+    const q = query(collection(db, 'samples'), where('public', '==', true));
+    const snap = await getDocs(q);
     let samples =[];
-    snap.forEach(doc => samples.push({ id: doc.id, ...doc.data() }));
+    snap.forEach(document => samples.push({ id: document.id, ...document.data() }));
     samples.sort((a, b) => (a.order || 9999) - (b.order || 9999));
     return samples;
 };
 
-// Authentication Logic (Using Firebase REST API for Client Login without Web SDK)
+// Authentication Logic
 const loginUser = async (email, password, recaptchaToken) => {
     const isValid = await verifyRecaptcha(recaptchaToken);
     if (!isValid) throw new Error("Invalid reCAPTCHA");
 
-    const apiKey = process.env.FIREBASE_API_KEY;
-    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
-    
-    const res = await axios.post(url, { email, password, returnSecureToken: true });
-    return res.data; // Contains idToken, localId (uid), email
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const token = await userCredential.user.getIdToken();
+    return {
+        idToken: token,
+        localId: userCredential.user.uid,
+        email: userCredential.user.email
+    };
 };
 
 const signupUser = async (email, password, name, profilePic, recaptchaToken) => {
     const isValid = await verifyRecaptcha(recaptchaToken);
     if (!isValid) throw new Error("Invalid reCAPTCHA");
 
-    const apiKey = process.env.FIREBASE_API_KEY;
-    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`;
-    
-    // Create Auth User
-    const res = await axios.post(url, { email, password, returnSecureToken: true });
-    const user = res.data;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
     // Save to Firestore Database
-    await db.collection('users').doc(user.localId).set({
+    await setDoc(doc(db, 'users', user.uid), {
         name,
         email,
         profilePic: profilePic || '',
         createdAt: new Date().toISOString()
     });
 
-    return user;
+    const token = await user.getIdToken();
+    return {
+        idToken: token,
+        localId: user.uid,
+        email: user.email
+    };
 };
 
 const resetPassword = async (email) => {
-    const apiKey = process.env.FIREBASE_API_KEY;
-    const url = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`;
-    await axios.post(url, { requestType: "PASSWORD_RESET", email });
+    await sendPasswordResetEmail(auth, email);
     return true;
 };
 
 // Admin Chat Logic
 const getMessages = async (userId) => {
-    const snap = await db.collection('messages')
-        .where('userId', '==', userId)
-        .orderBy('timestamp', 'asc')
-        .get();
+    const q = query(collection(db, 'messages'), where('userId', '==', userId), orderBy('timestamp', 'asc'));
+    const snap = await getDocs(q);
     let msgs =[];
-    snap.forEach(doc => msgs.push(doc.data()));
+    snap.forEach(document => msgs.push(document.data()));
     return msgs;
 };
 
 const saveMessage = async (userId, email, text) => {
-    await db.collection('messages').add({
+    await addDoc(collection(db, 'messages'), {
         text,
         userId,
         email,
@@ -84,7 +84,7 @@ const saveMessage = async (userId, email, text) => {
 // Bot Chat Logic
 const processBotMessage = async (history) => {
     const sysPrompt = "You are a friendly AI Assistant. Keep answers concise, helpful, and natural.";
-    const messages =[{ role: 'system', content: sysPrompt }, ...history.slice(-15)];
+    const messages = [{ role: 'system', content: sysPrompt }, ...history.slice(-15)];
     return await chatWithBot(messages);
 };
 

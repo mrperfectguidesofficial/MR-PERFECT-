@@ -1,28 +1,33 @@
 const express = require('express');
 const corsMiddleware = require('./cors');
-const { admin } = require('./firebase');
 const { getCloudinaryConfig } = require('./cloudinary');
 const { getSiteKey } = require('./recaptcha');
 const publicApi = require('./public api');
 const scripts = require('./script');
+const axios = require('axios');
 
 const app = express();
 app.use(corsMiddleware);
 app.use(express.json());
 
-// Auth Middleware
+// Auth Middleware (Verifying ID Token using Firebase REST API)
 const authenticate = async (req, res, next) => {
     const token = req.headers.authorization?.split('Bearer ')[1];
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     try {
-        req.user = await admin.auth().verifyIdToken(token);
+        const apiKey = process.env.FIREBASE_API_KEY;
+        const response = await axios.post(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+            idToken: token
+        });
+        const userData = response.data.users[0];
+        req.user = { uid: userData.localId, email: userData.email };
         next();
     } catch (e) {
         res.status(401).json({ error: 'Unauthorized token' });
     }
 };
 
-// 1. Config Route (Passes non-sensitive keys to frontend)
+// 1. Config Route
 app.get('/api/config', (req, res) => {
     res.json({
         recaptchaSiteKey: getSiteKey(),
@@ -65,7 +70,7 @@ app.post('/api/auth/reset', async (req, res) => {
     } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-// 4. Admin Chat (Protected)
+// 4. Admin Chat
 app.get('/api/chat/messages', authenticate, async (req, res) => {
     try { res.json(await scripts.getMessages(req.user.uid)); } 
     catch (err) { res.status(500).json({ error: err.message }); }
@@ -97,10 +102,8 @@ app.get('/api/public/rates', async (req, res) => {
     try { res.json(await publicApi.getExchangeRates()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Export Express App for Vercel
 module.exports = app;
 
-// Local Development Server
 if (require.main === module) {
     app.listen(3000, () => console.log('Server running on port 3000'));
 }
