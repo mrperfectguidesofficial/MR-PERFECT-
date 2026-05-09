@@ -79,21 +79,9 @@ app.get('/api/chat/history', async (req, res) => {
 app.post('/api/chat/bot', async (req, res) => {
     try {
         const { messages } = req.body;
-        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-            model: "google/gemini-2.5-flash", // আপনি চাইলে মডেল পরিবর্তন করতে পারেন
-            messages: messages
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        const reply = response.data.choices[0].message.content;
+        const reply = await askOpenRouter(messages);
         res.json({ success: true, reply });
-    } catch (error) {
-        console.error("Bot Error:", error);
-        res.json({ success: false, error: 'AI Bot is offline' });
-    }
+    } catch (err) { res.status(500).json({ success: false, error: "AI Error" }); }
 });
 
 // ==========================================
@@ -147,19 +135,10 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 app.post('/api/pricing/calculate', async (req, res) => {
-    try {
-        const { baseUsd, currency } = req.body;
-        if (currency === 'USD') return res.json({ success: true, price: baseUsd });
-        
-        const response = await axios.get(`https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE}/latest/USD`);
-        const rate = response.data.conversion_rates[currency];
-        const converted = Math.round(baseUsd * rate);
-        
-        res.json({ success: true, price: converted });
-    } catch (error) {
-        res.json({ success: false, error: 'Calculation failed' });
-    }
+    const { baseUsd, currency } = req.body;
+    const finalPrice = await calculateCustomPrice(baseUsd, currency);
+    res.json({ success: true, ...finalPrice });
 });
 
-// Export Express App for Vercel
+// Only for Vercel execution
 module.exports = app;
