@@ -1,237 +1,165 @@
 const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const { collection, addDoc, getDocs, query, where, orderBy } = require('firebase/firestore');
+const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = require('firebase/auth');
+const { db, auth } = require('../utils/firebase');
 require('dotenv').config();
-const corsMiddleware = require('./cors');
-
-const { 
-    db,
-    collection,
-    getDocs,
-    query,
-    where,
-    orderBy,
-    loginUser,
-    signupUser,
-    addMessageToFirestore
-} = require('../utils/firebase');
-
-const { getCloudinaryConfig } = require('../utils/cloudinary');
-const { verifyRecaptcha } = require('../utils/recaptcha');
-const { askOpenRouter } = require('../utils/openrouter');
-const { calculateCustomPrice } = require('../utils/script');
 
 const app = express();
 
-app.use(corsMiddleware);
+// CORS Middleware
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || '*' }));
 app.use(express.json());
 
-
 // ==========================================
-// 1. Portfolio API
-// ==========================================
-app.get('/api/portfolio', async (req, res) => {
-    try {
-        const snapshot = await getDocs(collection(db, 'portfolio'));
-        let data = {};
-        snapshot.forEach(doc => {
-            if (doc.id === 'mainData') {
-                data = doc.data();
-            }
-        });
-        res.json({ success: true, data });
-    } catch (err) {
-        console.error("Portfolio Error:", err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-
-// ==========================================
-// 2. Samples API
-// ==========================================
-app.get('/api/samples', async (req, res) => {
-    try {
-        const q = query(collection(db, 'samples'), where('public', '==', true));
-        const snap = await getDocs(q);
-
-        let samples = [];
-        snap.forEach(doc => samples.push({ id: doc.id, ...doc.data() }));
-
-        res.json({ success: true, data: samples });
-    } catch (err) {
-        console.error("Samples Error:", err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-
-// ==========================================
-// 3. Auth APIs
-// ==========================================
-app.post('/api/auth/login', async (req, res) => {
-    try {
-        const { email, password, recaptchaToken } = req.body;
-
-        const isHuman = await verifyRecaptcha(recaptchaToken);
-        if (!isHuman) {
-            return res.status(400).json({ success: false, error: "Bot detected" });
-        }
-
-        const authData = await loginUser(email, password);
-
-        res.json({
-            success: true,
-            user: {
-                uid: authData.localId,
-                email: authData.email,
-                idToken: authData.idToken
-            }
-        });
-
-    } catch (err) {
-        console.error("Login Error:", err.response?.data || err.message);
-        res.status(401).json({ success: false, error: "Invalid credentials" });
-    }
-});
-
-
-app.post('/api/auth/signup', async (req, res) => {
-    try {
-        const { name, email, password, profilePic, recaptchaToken } = req.body;
-
-        const isHuman = await verifyRecaptcha(recaptchaToken);
-        if (!isHuman) {
-            return res.status(400).json({ success: false, error: "Bot detected" });
-        }
-
-        const authData = await signupUser(email, password);
-
-        res.json({
-            success: true,
-            user: {
-                uid: authData.localId,
-                email: authData.email,
-                idToken: authData.idToken
-            }
-        });
-
-    } catch (err) {
-        console.error("Signup Error:", err.response?.data || err.message);
-        res.status(400).json({ success: false, error: err.message });
-    }
-});
-
-
-// ==========================================
-// 4. Config APIs
+// 1. Configuration APIs (reCAPTCHA & Cloudinary)
 // ==========================================
 app.get('/api/config/recaptcha', (req, res) => {
     res.json({ siteKey: process.env.RECAPTCHA_SITE_KEY });
 });
 
 app.get('/api/config/cloudinary', (req, res) => {
-    res.json(getCloudinaryConfig());
+    res.json({
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        uploadPreset: process.env.CLOUDINARY_UPLOAD_PRESET
+    });
 });
 
-
 // ==========================================
-// 5. Chat APIs (REST Write Version)
+// 2. Chat System API (Developer & AI)
 // ==========================================
 app.post('/api/chat/send', async (req, res) => {
     try {
-
         const { text, userId, email } = req.body;
-
-        if (!text || !userId) {
-            return res.status(400).json({
-                success: false,
-                error: "Text and userId required"
-            });
-        }
-
-        await addMessageToFirestore({
-            text,
-            userId,
-            email: email || "",
-            isAdmin: false
+        
+        // Firebase ডাটাবেসে মেসেজ সেভ করা হচ্ছে
+        await addDoc(collection(db, 'messages'), {
+            text: text,
+            userId: userId,
+            email: email || '',
+            timestamp: new Date(),
+            isAdmin: false // যেহেতু ইউজার থেকে আসছে
         });
-
-        console.log("Message Saved via REST API");
-
+        
         res.json({ success: true });
-
-    } catch (err) {
-        console.error("Chat Send Error:", err.response?.data || err.message);
-        res.status(500).json({ success: false, error: "Failed to send message" });
+    } catch (error) {
+        console.error("Chat Send Error:", error);
+        res.json({ success: false, error: 'Failed to send message' });
     }
 });
-
 
 app.get('/api/chat/history', async (req, res) => {
     try {
-
         const { userId } = req.query;
-
-        if (!userId) {
-            return res.json({ success: true, data: [] });
-        }
-
-        const snap = await getDocs(
-            query(
-                collection(db, 'messages'),
-                where('userId', '==', userId),
-                orderBy('timestamp', 'asc')
-            )
+        const q = query(
+            collection(db, 'messages'),
+            where('userId', '==', userId),
+            orderBy('timestamp', 'asc')
         );
-
-        let messages = [];
-
-        snap.forEach(doc => {
+        const snapshot = await getDocs(q);
+        
+        let messages =[];
+        snapshot.forEach(doc => {
             let data = doc.data();
-
+            // ফ্রন্টএন্ডের সুবিধার জন্য টাইমস্ট্যাম্প মিলি-সেকেন্ডে রূপান্তর
             if (data.timestamp && data.timestamp.toDate) {
                 data.timestamp = data.timestamp.toDate().getTime();
             }
-
             messages.push(data);
         });
-
+        
         res.json({ success: true, data: messages });
-
-    } catch (err) {
-        console.error("Chat History Error:", err);
-        res.status(500).json({ success: false, error: err.message });
+    } catch (error) {
+        console.error("Chat History Error:", error);
+        res.json({ success: false, error: 'Failed to fetch history' });
     }
 });
 
-
-// ==========================================
-// 6. AI Bot
-// ==========================================
 app.post('/api/chat/bot', async (req, res) => {
     try {
         const { messages } = req.body;
-        const reply = await askOpenRouter(messages);
+        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: "google/gemini-2.5-flash", // আপনি চাইলে মডেল পরিবর্তন করতে পারেন
+            messages: messages
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        const reply = response.data.choices[0].message.content;
         res.json({ success: true, reply });
-    } catch (err) {
-        console.error("Bot Error:", err);
-        res.status(500).json({ success: false, error: "AI Error" });
+    } catch (error) {
+        console.error("Bot Error:", error);
+        res.json({ success: false, error: 'AI Bot is offline' });
     }
 });
 
+// ==========================================
+// 3. Portfolio & Samples API
+// ==========================================
+app.get('/api/portfolio', async (req, res) => {
+    try {
+        const snapshot = await getDocs(collection(db, 'portfolio'));
+        let data = {};
+        snapshot.forEach(doc => { data = doc.data(); });
+        res.json({ success: true, data });
+    } catch (error) {
+        res.json({ success: false, error: 'Failed to fetch portfolio' });
+    }
+});
+
+app.get('/api/samples', async (req, res) => {
+    try {
+        const snapshot = await getDocs(collection(db, 'samples'));
+        let data =[];
+        snapshot.forEach(doc => { 
+            data.push({ id: doc.id, ...doc.data() }); 
+        });
+        res.json({ success: true, data });
+    } catch (error) {
+        res.json({ success: false, error: 'Failed to fetch samples' });
+    }
+});
 
 // ==========================================
-// 7. Pricing API
+// 4. Auth & Pricing APIs
 // ==========================================
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        res.json({ success: true, user: { uid: userCredential.user.uid, email: userCredential.user.email } });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        res.json({ success: true, user: { uid: userCredential.user.uid, email: userCredential.user.email } });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/pricing/calculate', async (req, res) => {
     try {
         const { baseUsd, currency } = req.body;
-        const finalPrice = await calculateCustomPrice(baseUsd, currency);
-        res.json({ success: true, ...finalPrice });
-    } catch (err) {
-        console.error("Pricing Error:", err);
-        res.status(500).json({ success: false, error: err.message });
+        if (currency === 'USD') return res.json({ success: true, price: baseUsd });
+        
+        const response = await axios.get(`https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE}/latest/USD`);
+        const rate = response.data.conversion_rates[currency];
+        const converted = Math.round(baseUsd * rate);
+        
+        res.json({ success: true, price: converted });
+    } catch (error) {
+        res.json({ success: false, error: 'Calculation failed' });
     }
 });
 
-
+// Export Express App for Vercel
 module.exports = app;
