@@ -3,15 +3,15 @@ require('dotenv').config();
 const corsMiddleware = require('./cors');
 
 const { 
-    db, 
-    collection, 
-    getDocs, 
-    addDoc, 
-    query, 
-    where, 
-    orderBy, 
-    loginUser, 
-    signupUser 
+    db,
+    collection,
+    getDocs,
+    query,
+    where,
+    orderBy,
+    loginUser,
+    signupUser,
+    addMessageToFirestore
 } = require('../utils/firebase');
 
 const { getCloudinaryConfig } = require('../utils/cloudinary');
@@ -52,8 +52,10 @@ app.get('/api/samples', async (req, res) => {
     try {
         const q = query(collection(db, 'samples'), where('public', '==', true));
         const snap = await getDocs(q);
-        const samples = [];
+
+        let samples = [];
         snap.forEach(doc => samples.push({ id: doc.id, ...doc.data() }));
+
         res.json({ success: true, data: samples });
     } catch (err) {
         console.error("Samples Error:", err);
@@ -75,10 +77,18 @@ app.post('/api/auth/login', async (req, res) => {
         }
 
         const authData = await loginUser(email, password);
-        res.json({ success: true, user: { uid: authData.localId, email: authData.email } });
+
+        res.json({
+            success: true,
+            user: {
+                uid: authData.localId,
+                email: authData.email,
+                idToken: authData.idToken
+            }
+        });
 
     } catch (err) {
-        console.error("Login Error:", err);
+        console.error("Login Error:", err.response?.data || err.message);
         res.status(401).json({ success: false, error: "Invalid credentials" });
     }
 });
@@ -93,20 +103,19 @@ app.post('/api/auth/signup', async (req, res) => {
             return res.status(400).json({ success: false, error: "Bot detected" });
         }
 
-        const authData = await signupUser(email, password, name);
+        const authData = await signupUser(email, password);
 
-        await addDoc(collection(db, 'users'), {
-            uid: authData.localId,
-            name,
-            email,
-            profilePic: profilePic || "",
-            createdAt: new Date()
+        res.json({
+            success: true,
+            user: {
+                uid: authData.localId,
+                email: authData.email,
+                idToken: authData.idToken
+            }
         });
 
-        res.json({ success: true, user: { uid: authData.localId, email: authData.email } });
-
     } catch (err) {
-        console.error("Signup Error:", err);
+        console.error("Signup Error:", err.response?.data || err.message);
         res.status(400).json({ success: false, error: err.message });
     }
 });
@@ -125,12 +134,10 @@ app.get('/api/config/cloudinary', (req, res) => {
 
 
 // ==========================================
-// 5. Chat APIs (FULL FIXED)
+// 5. Chat APIs (REST Write Version)
 // ==========================================
 app.post('/api/chat/send', async (req, res) => {
     try {
-
-        console.log("Incoming Chat:", req.body);
 
         const { text, userId, email } = req.body;
 
@@ -141,21 +148,20 @@ app.post('/api/chat/send', async (req, res) => {
             });
         }
 
-        await addDoc(collection(db, 'messages'), {
-            text: text,
-            userId: userId,
+        await addMessageToFirestore({
+            text,
+            userId,
             email: email || "",
-            isAdmin: false,
-            timestamp: new Date()
+            isAdmin: false
         });
 
-        console.log("Message Saved to Firebase");
+        console.log("Message Saved via REST API");
 
         res.json({ success: true });
 
     } catch (err) {
-        console.error("Chat Send Error:", err);
-        res.status(500).json({ success: false, error: err.message });
+        console.error("Chat Send Error:", err.response?.data || err.message);
+        res.status(500).json({ success: false, error: "Failed to send message" });
     }
 });
 
@@ -228,5 +234,4 @@ app.post('/api/pricing/calculate', async (req, res) => {
 });
 
 
-// ==========================================
 module.exports = app;
