@@ -1,7 +1,6 @@
 const { initializeApp } = require('firebase/app');
-const { getFirestore } = require('firebase/firestore');
-const { getAuth } = require('firebase/auth');
-require('dotenv').config();
+const { getFirestore, collection, getDocs, addDoc, query, where, orderBy } = require('firebase/firestore');
+const axios = require('axios');
 
 const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
@@ -12,9 +11,20 @@ const firebaseConfig = {
     appId: process.env.FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth(app);
 
-module.exports = { db, auth };
+// Auth using Firebase REST API (Because Admin SDK is not allowed)
+async function loginUser(email, password) {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`;
+    const res = await axios.post(url, { email, password, returnSecureToken: true });
+    return res.data; // contains localId (uid), idToken, email
+}
+
+async function signupUser(email, password, name) {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+    const res = await axios.post(url, { email, password, returnSecureToken: true });
+    return res.data;
+}
+
+module.exports = { db, collection, getDocs, addDoc, query, where, orderBy, loginUser, signupUser };
