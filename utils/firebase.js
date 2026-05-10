@@ -1,6 +1,16 @@
 const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, getDocs, query, where, orderBy } = require('firebase/firestore');
+const { 
+    getFirestore,
+    collection,
+    getDocs,
+    addDoc,
+    query,
+    where,
+    orderBy
+} = require('firebase/firestore');
+
 const axios = require('axios');
+require('dotenv').config();
 
 const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
@@ -15,9 +25,33 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 
-// ==========================
-// 🔥 NEW: Firestore REST Write
-// ==========================
+// ==============================
+// AUTH (REST API)
+// ==============================
+async function loginUser(email, password) {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`;
+    const res = await axios.post(url, {
+        email,
+        password,
+        returnSecureToken: true
+    });
+    return res.data;
+}
+
+async function signupUser(email, password) {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+    const res = await axios.post(url, {
+        email,
+        password,
+        returnSecureToken: true
+    });
+    return res.data;
+}
+
+
+// ==============================
+// MESSAGE WRITE (SAFE METHOD)
+// ==============================
 async function addMessageToFirestore(data) {
 
     const url = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/messages?key=${firebaseConfig.apiKey}`;
@@ -36,29 +70,15 @@ async function addMessageToFirestore(data) {
 }
 
 
-// ==========================
-// Auth via REST
-// ==========================
-async function loginUser(email, password) {
-    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`;
-    const res = await axios.post(url, { email, password, returnSecureToken: true });
-    return res.data;
-}
-
-async function signupUser(email, password) {
-    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
-    const res = await axios.post(url, { email, password, returnSecureToken: true });
-    return res.data;
-}
-
-module.exports = { 
-    db, 
-    collection, 
-    getDocs, 
-    query, 
-    where, 
-    orderBy, 
-    loginUser, 
+module.exports = {
+    db,
+    collection,
+    getDocs,
+    addDoc,
+    query,
+    where,
+    orderBy,
+    loginUser,
     signupUser,
     addMessageToFirestore
 };
