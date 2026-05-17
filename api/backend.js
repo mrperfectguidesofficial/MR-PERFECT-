@@ -102,13 +102,51 @@ app.get('/api/chat/history', async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// 6. Bot Chat (OpenRouter)
+// 6. Bot Chat (OpenRouter) – কাস্টম সিস্টেম প্রম্পট সহ
 app.post('/api/chat/bot', async (req, res) => {
     try {
-        const { messages } = req.body;
-        const reply = await askOpenRouter(messages);
+        let { messages } = req.body; // ইউজারের চ্যাট হিস্টোরি (ব্যাকএন্ডে আসবে)
+
+        // বর্তমান সময়, তারিখ, বছর (ইন্ডিয়ান টাইমজোন)
+        const now = new Date();
+        const indianTime = new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+        }).format(now);
+        const currentYear = now.getFullYear();
+
+        // 💡 কাস্টম সিস্টেম প্রম্পট – আপনার সব নির্দেশনা এখানে
+        const systemPrompt = `তুমি "MR Perfect" এর অফিসিয়াল AI সহায়ক।
+তোমার নাম "MR Perfect Bot"।
+তুমি ওপেনরাউটার (OpenRouter) ব্যবহার করো, মডেলটা মেটা-লামা।
+
+তোমাকে অবশ্যই নিচের নিয়মগুলো কঠোরভাবে মানতে হবে:
+❌ কখনো বলবে না: "How can I help", "I am an AI assistant", "How may I assist you"
+❌ কখনো সার্ভিসের লিস্ট দেবে না।
+❌ কখনো নিজেকে "Artificial Intelligence" বলে পরিচয় দেবে না।
+✅ পরিচয় জিজ্ঞেস করলে বলবে: "আমি MR Perfect-এর সহায়ক, আমি সরাসরি ডেভেলপারকে সাহায্য করি।"
+✅ উত্তর হবে ছোট, স্বাভাবিক, বন্ধুত্বপূর্ণ।
+✅ বাংলা ইনপুট পেলে Bnglish এ উত্তর দেবে (ইংরেজি অক্ষরে বাংলা উচ্চারণ)।
+✅ প্রতি উত্তর সর্বোচ্চ ১টি ইমোজি ব্যবহার করবে (ইমোশনাল টোনের জন্য)।
+✅ প্রাইসিং সম্পর্কে জানতে চাইলে বলবে: "বেস প্রাইস USD থেকে শুরু, চূড়ান্ত মূল্য ফিচার অনুযায়ী।"
+
+বর্তমান সময় ও তারিখ (Asia/Kolkata): ${indianTime}
+বর্তমান বছর: ${currentYear}
+মনে রেখো, তুমি একজন রিয়েল হিউম্যানের মতো কথা বলবে, কোনো সাহায্যকারী রোবটের মতো নয়।`;
+
+        // সিস্টেম প্রম্পটকে messages এর শুরুতে যোগ করো
+        const fullMessages = [
+            { role: 'system', content: systemPrompt },
+            ...messages.slice(-15) // সর্বশেষ ১৫টি মেসেজ (টোকেন বাঁচাতে)
+        ];
+
+        const reply = await askOpenRouter(fullMessages);
         res.json({ success: true, reply });
-    } catch (err) { res.status(500).json({ success: false, error: "AI Error" }); }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: "AI Error" });
+    }
 });
 
 // 7. Dynamic Pricing Logic Execution
