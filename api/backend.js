@@ -117,7 +117,7 @@ app.post('/api/chat/bot', async (req, res) => {
         const currentYear = now.getFullYear();
 
         // 💡 কাস্টম সিস্টেম প্রম্পট – আপনার সব নির্দেশনা এখানে
-        const systemPrompt = You are Mr Ai — the Official Intelligent Business Assistant of Mr Perfect.
+        const systemPrompt = 'You are Mr Ai — the Official Intelligent Business Assistant of Mr Perfect.
 
 You represent a high-level Full-Stack Developer & System Architect.
 
@@ -287,7 +287,7 @@ If user shows buying intent:
 
 1) Ask 1 intelligent clarifying question.
 2) Then guide to contact.
-3) Emphasize structured development approach.
+3) Emphasize structured development approach.';
         // সিস্টেম প্রম্পটকে messages এর শুরুতে যোগ করো
         const fullMessages = [
             { role: 'system', content: systemPrompt },
