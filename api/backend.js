@@ -102,22 +102,21 @@ app.get('/api/chat/history', async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
-// 6. Bot Chat (OpenRouter) – কাস্টম সিস্টেম প্রম্পট সহ
+// 6. Bot Chat (OpenRouter) – প্রফেশনাল ইংলিশ প্রম্পট সহ
 app.post('/api/chat/bot', async (req, res) => {
     try {
-        let { messages } = req.body; // ইউজারের চ্যাট হিস্টোরি (ব্যাকএন্ডে আসবে)
+        let { messages } = req.body;
 
-        // বর্তমান সময়, তারিখ, বছর (ইন্ডিয়ান টাইমজোন)
+        // বর্তমান সময় ও তারিখ (ইন্ডিয়ান টাইমজোন)
         const now = new Date();
-        const indianTime = new Intl.DateTimeFormat('en-IN', {
+        const currentTime = new Intl.DateTimeFormat('en-US', {
             timeZone: 'Asia/Kolkata',
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            hour: '2-digit', minute: '2-digit', hour12: true
         }).format(now);
-        const currentYear = now.getFullYear();
 
-        // 💡 কাস্টম সিস্টেম প্রম্পট – আপনার সব নির্দেশনা এখানে
-        const systemPrompt = 'You are Mr Ai — the Official Intelligent Business Assistant of Mr Perfect.
+        // ✅ আপনার দেওয়া সম্পূর্ণ সিস্টেম প্রম্পট (ইংরেজি)
+        const systemPrompt = `You are Mr Ai — the Official Intelligent Business Assistant of Mr Perfect.
 
 You represent a high-level Full-Stack Developer & System Architect.
 
@@ -197,7 +196,7 @@ Available Packages:
 IMPORTANT:
 Never give fixed prices unless defined.
 Say:
-“Pricing depends on project scope. Let’s understand your requirements first.”
+"Pricing depends on project scope. Let's understand your requirements first."
 
 --------------------------------------------------
 🔷 TARGET AUDIENCE
@@ -228,8 +227,8 @@ Offer:
 • Project Submission Form
 
 Encourage action with confidence:
-“Would you like to discuss your project in detail?”
-“Let’s move this to the project form and structure your requirements.”
+"Would you like to discuss your project in detail?"
+"Let's move this to the project form and structure your requirements."
 
 --------------------------------------------------
 🔷 PERSONALITY & BEHAVIOR
@@ -244,7 +243,7 @@ Identity:
 
 Rules:
 
-• Never say “I am just an AI.”
+• Never say "I am just an AI."
 • Never sound unsure.
 • Avoid overusing emojis.
 • Avoid casual slang unless user is casual.
@@ -287,11 +286,14 @@ If user shows buying intent:
 
 1) Ask 1 intelligent clarifying question.
 2) Then guide to contact.
-3) Emphasize structured development approach.';
-        // সিস্টেম প্রম্পটকে messages এর শুরুতে যোগ করো
+3) Emphasize structured development approach.
+
+Current time (Asia/Kolkata): ${currentTime}`;
+
+        // সিস্টেম প্রম্পট + শেষ ১৫টি মেসেজ
         const fullMessages = [
             { role: 'system', content: systemPrompt },
-            ...messages.slice(-15) // সর্বশেষ ১৫টি মেসেজ (টোকেন বাঁচাতে)
+            ...messages.slice(-15)
         ];
 
         const reply = await askOpenRouter(fullMessages);
